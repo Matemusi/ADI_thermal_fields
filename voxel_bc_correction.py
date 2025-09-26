@@ -83,10 +83,16 @@ class STLBoundaryCorrector:
 
             for sub_tri in sub_tris:
                 centroid = np.mean(sub_tri, axis=0)
+
                 voxel_idx = np.floor((centroid - self.origin) / self.dx)
                 if np.any(voxel_idx < -1) or np.any(voxel_idx > (np.array(self.shape) + 1)):
                     continue
                 voxel_idx = np.clip(voxel_idx, 0, np.array(self.shape) - 1).astype(int)
+                
+                voxel_idx = np.floor((centroid - self.origin) / self.dx).astype(int)
+                if np.any(voxel_idx < 0) or np.any(voxel_idx >= self.shape):
+                    continue
+
 
                 idx_tuple = (int(voxel_idx[0]), int(voxel_idx[1]), int(voxel_idx[2]))
                 if not self.mask[idx_tuple]:

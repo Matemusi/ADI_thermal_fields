@@ -157,9 +157,14 @@ def main():
         dphi = grid.dphi
         # which indices are crossed? take integer cells whose [i*dphi,(i+1)*dphi) intersect (ang0,ang1]
         i0 = int(math.floor(ang0 / dphi))
-        i1 = int(math.floor(ang1 / dphi))
+        # subtract a tiny epsilon so that an arc ending exactly on a boundary
+        # still activates the last touched column, while ensuring at least i0
+        # is included.
+        i1 = int(math.floor((ang1 - 1e-12) / dphi))
+        if i1 < i0:
+            i1 = i0
         added = 0
-        for i in range(i0+1, i1+1):
+        for i in range(i0, i1 + 1):
             iphi = i % grid.nphi
             if not active[0, iphi, iz]:
                 active[:, iphi, iz] = True

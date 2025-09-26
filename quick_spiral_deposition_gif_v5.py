@@ -25,7 +25,49 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib.colors import LogNorm
 
-from adi3d_cyl_phi_v3 import GridCyl, Material, Params, RobinR, ZBC
+from adi3d_cyl_phi_v3 import GridCyl, Material, Params, RobinR, ZBC, adi_step
+
+
+def adi_step_masked(Tn, grid, mat, prm, robin_outer, zbc, active,
+                    robin_inner=None, robin_void=None):
+    """Wrapper around :func:`adi_step` that keeps void cells clamped.
+
+    Parameters
+    ----------
+    Tn : np.ndarray
+        Temperature field at the start of the step ``(nr, nphi, nz)``.
+    active : np.ndarray
+        Boolean mask selecting cells that belong to solid material.
+    robin_inner / robin_void : RobinR, optional
+        Convection data to use at material/void interfaces.  They are
+        currently used to determine the ambient temperature that void
+        cells should be clamped to.  When ``None`` they default to the
+        outer Robin data.
+    """
+
+    robin_inner = robin_inner or robin_outer
+    robin_void = robin_void or robin_outer
+
+    T_work = np.array(Tn, copy=True)
+    ambient_inner = float(robin_inner.T_inf)
+    ambient_void = float(robin_void.T_inf)
+
+    void_mask = ~active
+    if np.any(void_mask):
+        T_work[void_mask] = ambient_void
+
+    Tnp1 = adi_step(T_work, grid, mat, prm, robin_outer, zbc)
+
+    if np.any(void_mask):
+        Tnp1[void_mask] = ambient_void
+
+    # For completeness keep innermost cells (axis) tied to the provided
+    # inner Robin reference temperature when they are inactive.
+    axis_mask = (~active[0])
+    if np.any(axis_mask):
+        Tnp1[0, axis_mask] = ambient_inner
+
+    return Tnp1
 
 # ---------------------------- utils / grid ----------------------------------
 
